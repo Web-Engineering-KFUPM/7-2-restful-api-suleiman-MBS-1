@@ -16,50 +16,57 @@ app.use(express.json());
 
 await connectDB(process.env.MONGO_URL);
 
-// api/songs (Read all songs)
-app.get("/api/songs", async (req, res) => {
-  try {
-    const songs = await Song.find();
-    res.json(songs);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch songs" });
-  }
-});
-
-// api/songs (Insert song)
+// TODO 3: POST /api/songs (Insert)
 app.post("/api/songs", async (req, res) => {
   try {
-    const newSong = await Song.create(req.body);
-    res.status(201).json(newSong);
-  } catch (error) {
-    res.status(400).json({ error: "Failed to create song" });
+    const { title = "", artist = "", year } = req.body || {};
+    const created = await Song.create({
+      title: title.trim(),
+      artist: artist.trim(),
+      year
+    });
+    res.status(201).json(created);
+  } catch (err) {
+    res.status(400).json({ message: err.message || "Failed to create song" });
   }
 });
 
-// /api/songs/:id (Update song)
+// TODO 4: GET /api/songs (Read all)
+app.get("/api/songs", async (req, res) => {
+  const rows = await Song.find().sort({ createdAt: -1 });
+  res.json(rows);
+});
+
+// TODO 4: GET /api/songs/:id (Read one)
+app.get("/api/songs/:id", async (req, res) => {
+  const s = await Song.findById(req.params.id);
+  if (!s) return res.status(404).json({ message: "Song not found" });
+  res.json(s);
+});
+
+// TODO 5: PUT /api/songs/:id (Update)
 app.put("/api/songs/:id", async (req, res) => {
   try {
-    const updatedSong = await Song.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.json(updatedSong);
-  } catch (error) {
-    res.status(400).json({ error: "Failed to update song" });
+    const updated = await Song.findByIdAndUpdate(
+      req.params.id,
+      req.body || {},
+      { new: true, runValidators: true, context: "query" }
+    );
+    if (!updated) return res.status(404).json({ message: "Song not found" });
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: err.message || "Failed to update song" });
   }
 });
 
-// /api/songs/:id (Delete song)
+// TODO 6: DELETE /api/songs/:id
 app.delete("/api/songs/:id", async (req, res) => {
-  try {
-    await Song.findByIdAndDelete(req.params.id);
-    res.json({ message: "Song deleted successfully" });
-  } catch (error) {
-    res.status(400).json({ error: "Failed to delete song" });
-  }
+  const deleted = await Song.findByIdAndDelete(req.params.id);
+  if (!deleted) return res.status(404).json({ message: "Song not found" });
+  res.status(204).end();
 });
 
 app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
-
-
-
 
 
 /*import express from "express";
